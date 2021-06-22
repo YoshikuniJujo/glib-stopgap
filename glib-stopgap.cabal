@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Foreign.Ptr.Misc
       System.GLib.Bool
       System.GLib.DoublyLinkedLists
       System.GLib.ErrorReporting

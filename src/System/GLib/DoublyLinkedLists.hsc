@@ -1,61 +1,69 @@
 {-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wall -fno-warn-tabs #-}
 
-module System.GLib.DoublyLinkedLists where
+module System.GLib.DoublyLinkedLists (
+	-- * TYPE
+	GList,
+
+	-- * LIST
+	g_list_to_list, g_list_to_prev_next_lists,
+
+	-- * POINTER
+	g_list_prev_data_next, g_list_data, g_list_prev, g_list_next,
+
+	-- * FREE
+	c_g_list_free ) where
 
 import Foreign.Ptr
-import Foreign.ForeignPtr
+import Foreign.Ptr.Misc
 import Foreign.Storable
 
 #include <glib.h>
 
-newtype GList a = GList (ForeignPtr (GList a)) deriving Show
-newtype GListRef a = GListRef (Ptr (GList a)) deriving Show
+data GList a
 
-g_list_prd_dat_nxt :: Ptr (GList a) -> IO (Ptr (GList a), Ptr a, Ptr (GList a))
-g_list_prd_dat_nxt p = (,,) <$> #{peek GList, prev} p <*> #{peek GList, data} p <*> #{peek GList, next} p
+g_list_to_list :: Ptr (GList a) -> IO [Ptr a]
+g_list_to_list = (uncurry appendReverse <$>) . g_list_to_prev_next_lists
 
-gListData :: Storable a => GListRef a -> IO (Maybe a)
-gListData (GListRef lst)
-	| lst == nullPtr = pure Nothing
-	| otherwise = do
-		(_, p, _) <- g_list_prd_dat_nxt lst
-		Just <$> peek p
+appendReverse :: [a] -> [a] -> [a]
+[] `appendReverse` ys = ys
+(x : xs) `appendReverse` ys = xs `appendReverse` (x : ys)
 
-gListDataPtr :: GListRef a -> IO (Maybe (Ptr a))
-gListDataPtr (GListRef lst)
-	| lst == nullPtr = pure Nothing
-	| otherwise = do
-		(_, p, _) <- g_list_prd_dat_nxt lst
-		pure $ Just p
+g_list_to_prev_next_lists :: Ptr (GList a) -> IO ([Ptr a], [Ptr a])
+g_list_to_prev_next_lists = \case
+	NullPtr -> pure ([], [])
+	p -> (,)
+		<$> (g_list_to_prev_list =<< #{peek GList, prev} p)
+		<*> g_list_to_next_list p
 
-gListPred :: GListRef a -> IO (Maybe (GListRef a))
-gListPred (GListRef lst)
-	| lst == nullPtr = pure Nothing
-	| otherwise = do
-		(prd, _, _) <- g_list_prd_dat_nxt lst
-		pure . Just $ GListRef prd
+g_list_to_prev_list :: Ptr (GList a) -> IO [Ptr a]
+g_list_to_prev_list = \case
+	NullPtr -> pure []
+	p -> (:)
+		<$> #{peek GList, data} p
+		<*> (g_list_to_prev_list =<< #{peek GList, prev} p)
 
-gListNext :: GListRef a -> IO (Maybe (GListRef a))
-gListNext (GListRef lst)
-	| lst == nullPtr = pure Nothing
-	| otherwise = do
-		(_, _, nxt) <- g_list_prd_dat_nxt lst
-		pure . Just $ GListRef nxt
+g_list_to_next_list :: Ptr (GList a) -> IO [Ptr a]
+g_list_to_next_list = \case
+	NullPtr -> pure []
+	p -> (:)
+		<$> #{peek GList, data} p
+		<*> (g_list_to_next_list =<< #{peek GList, next} p)
 
-gListPredListPtr :: GListRef a -> IO [Ptr a]
-gListPredListPtr lst = ((,) <$> gListDataPtr lst <*> gListPred lst) >>= \case
-	(Nothing, Nothing) -> pure []
-	(Just p, Just prd) -> (p :) <$> gListPredListPtr prd
-	_ -> error "never occur"
+g_list_prev_data_next ::
+	Ptr (GList a) -> IO (Maybe (Ptr (GList a), Ptr a, Ptr (GList a)))
+g_list_prev_data_next = \case
+	NullPtr -> pure Nothing
+	p -> (Just <$>) $ (,,)
+		<$> #{peek GList, prev} p
+		<*> #{peek GList, data} p
+		<*> #{peek GList, next} p
 
-gListNextListPtr :: GListRef a -> IO [Ptr a]
-gListNextListPtr lst = ((,) <$> gListDataPtr lst <*> gListNext lst) >>= \case
-	(Nothing, Nothing) -> pure []
-	(Just p, Just prd) -> (p :) <$> gListNextListPtr prd
-	_ -> error "never occur"
+g_list_data :: Ptr (GList a) -> IO (Maybe (Ptr a))
+g_list_data = \case NullPtr -> pure Nothing; p -> Just <$> #{peek GList, data} p
 
-gListListPtr :: GListRef a -> IO ([Ptr a], [Ptr a])
-gListListPtr lst = gListPred lst >>= \case
-	Nothing -> pure ([], [])
-	Just prd -> (,) <$> gListPredListPtr prd <*> gListNextListPtr lst
+g_list_prev, g_list_next :: Ptr (GList a) -> IO (Maybe (Ptr (GList a)))
+g_list_prev = \case NullPtr -> pure Nothing; p -> Just <$> #{peek GList, prev} p
+g_list_next = \case NullPtr -> pure Nothing; p -> Just <$> #{peek GList, next} p
+
+foreign import ccall "g_list_free" c_g_list_free :: Ptr (GList a) -> IO ()
