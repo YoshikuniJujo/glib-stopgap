@@ -30,6 +30,7 @@ library
       System.GLib.DoublyLinkedLists
       System.GLib.ErrorReporting
       System.GLib.GObject
+      System.GLib.Pointerable
       System.GLib.Quarks
       System.GLib.Quarks.Internal
       System.GLib.SimpleXmlSubsetParser
