@@ -22,19 +22,19 @@ import Foreign.Storable
 
 data GList a
 
-g_list_to_list :: Ptr (GList a) -> IO [Ptr a]
-g_list_to_list = (uncurry appendReverse <$>) . g_list_to_prev_next_lists
+g_list_to_list :: Ptr (GList a) -> IO (Maybe [Ptr a])
+g_list_to_list = ((uncurry appendReverse <$>) <$>) . g_list_to_prev_next_lists
 
 appendReverse :: [a] -> [a] -> [a]
 [] `appendReverse` ys = ys
 (x : xs) `appendReverse` ys = xs `appendReverse` (x : ys)
 
-g_list_to_prev_next_lists :: Ptr (GList a) -> IO ([Ptr a], [Ptr a])
+g_list_to_prev_next_lists :: Ptr (GList a) -> IO (Maybe ([Ptr a], [Ptr a]))
 g_list_to_prev_next_lists = \case
-	NullPtr -> pure ([], [])
-	p -> (,)
-		<$> (g_list_to_prev_list =<< #{peek GList, prev} p)
-		<*> g_list_to_next_list p
+	NullPtr -> pure Nothing
+	p -> Just <$> (
+		(,)	<$> (g_list_to_prev_list =<< #{peek GList, prev} p)
+			<*> g_list_to_next_list p )
 
 g_list_to_prev_list :: Ptr (GList a) -> IO [Ptr a]
 g_list_to_prev_list = \case
