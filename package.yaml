@@ -27,7 +27,9 @@ dependencies:
 
 library:
   source-dirs: src
-  pkg-config-dependencies: glib-2.0
+  pkg-config-dependencies:
+  - glib-2.0
+  - gobject-2.0
 
 tests:
   glib-stopgap-test:
