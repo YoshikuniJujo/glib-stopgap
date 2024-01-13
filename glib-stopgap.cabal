@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -41,6 +41,7 @@ library
       src
   pkgconfig-depends:
       glib-2.0
+    , gobject-2.0
   build-depends:
       base >=4.7 && <5
     , c-enum
