@@ -1,5 +1,5 @@
 name:                glib-stopgap
-version:             0.1.0.0
+version:             0.1.0.1
 github:              "githubuser/glib-stopgap"
 license:             BSD3
 author:              "Author name here"
@@ -21,9 +21,9 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
-- primitive
-- text
-- c-enum
+- primitive < 1
+- text < 3
+- c-enum < 1
 
 library:
   source-dirs: src
